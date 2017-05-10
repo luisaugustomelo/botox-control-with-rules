@@ -1,0 +1,86 @@
+package com.medicine.control;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+import com.medicine.control.handler.MailWithAuthentication;
+import org.kie.api.runtime.process.ProcessInstance;
+import org.jbpm.ruleflow.instance.RuleFlowProcessInstance;
+
+rule "low-temperature"
+	when
+		$temperature : Temperature(degrees <= -5);
+	then
+		System.out.println("Temperatura baixa: " + $temperature.getDegrees());
+		
+		//wait for 10 seconds
+		ProcessInstance processInstance = kcontext.getKieRuntime().startProcess("com.medicine.control.timer");
+		
+		while(true){	
+			if(processInstance.getState() != ProcessInstance.STATE_COMPLETED){
+				Thread.sleep(500);
+			}
+			else{
+				break;
+			}
+		}
+		
+		//RuleFlowProcessInstance ruleflowprocessInstance = (RuleFlowProcessInstance)processInstance;
+		//Object variable = ruleflowprocessInstance.getVariable("temp");
+		//Temperature t = (Temperature)variable;
+		//System.out.println(t.getDegrees());		
+		//$temperature.setAvailable(false);
+		
+		//System.out.println("Alerta de temperatura alta: " + temp.getDegrees());
+		//kcontext.getKnowledgeRuntime().insert(kcontext.getVariable("teste2"));
+		//System.out.println("====>" + teste2.getName() + "<===");
+		
+		Random gerador = new Random();
+		$temperature.setDegrees((gerador.nextInt(7) + 4) * -1);
+		update($temperature);
+end
+
+rule "high-temperature"
+	when
+		$temperature : Temperature(degrees > -5);
+	then
+		Map<String, Object> params = new HashMap<String, Object>(); 
+        params.put("temp", $temperature);
+        
+        // start a new process instance
+        
+		ProcessInstance processInstance = kcontext.getKieRuntime().startProcess("com.medicine.control.temperature_checks", params);
+		
+		/*RuleFlowProcessInstance ruleflowprocessInstance = (RuleFlowProcessInstance)processInstance;
+		Object variable = ruleflowprocessInstance.getVariable("temp");
+		Temperature t = (Temperature)variable;
+		System.out.println(t.getDegrees());*/ //mostra a temperatura modificada no processo.
+		
+		
+		//System.out.println("FactHandler: " + kcontext.getKnowledgeRuntime().getFactHandles());
+		//System.out.println(params.get("temp"));
+end
+
+rule "send-email"
+	when
+		$temperature : Temperature(notify == true);
+	then
+		String send_to = "luisaugustomelo@gmail.com";
+		String body = "Alerta de elevação de temperatura";
+		
+		MailWithAuthentication.sendEmail(send_to, body);
+end
+
+rule "verification-current-time"
+	when
+		
+	then
+end
+
+rule "check-sensor-on"
+	when
+	
+	then
+end
+
+
